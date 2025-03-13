@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\LoveReact;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,4 +16,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+Route::get('love-react', function(){
+    LoveReact::dispatch();
+    return "OK✅";
 });
