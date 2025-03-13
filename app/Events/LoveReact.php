@@ -22,8 +22,14 @@ class LoveReact implements ShouldBroadCast
         //
     }
 
-    public function broadcastWith() {
-        return "❤️";
+    public function broadcastWith()
+    {
+        return [
+            'message' => '❤️',
+            'broadcast' => [
+                'id' => $this->socket,
+            ]
+        ];
     }
 
     /**
