@@ -1,6 +1,6 @@
 <?php
 
-use App\Events\LoveReact;
+use App\Events\DataUpdateEvent;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,6 +15,12 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    LoveReact::dispatch();
-    return view('welcome');
+    try {
+        DataUpdateEvent::dispatch(10);
+        return view('welcome');
+    } catch (Exception $e) {
+        return response()->json([
+            'message' => 'Reverb is not running, please run `php artisan reverb:start`'
+        ]);
+    }
 });

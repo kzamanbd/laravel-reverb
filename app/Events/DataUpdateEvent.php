@@ -10,26 +10,18 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class LoveReact implements ShouldBroadCast
+class DataUpdateEvent implements ShouldBroadCast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
      * Create a new event instance.
      */
-    public function __construct()
-    {
-        //
-    }
+    public $value;
 
-    public function broadcastWith()
+    public function __construct($value)
     {
-        return [
-            'message' => '❤️',
-            'broadcast' => [
-                'id' => $this->socket,
-            ]
-        ];
+        $this->value = $value;
     }
 
     /**
@@ -40,7 +32,7 @@ class LoveReact implements ShouldBroadCast
     public function broadcastOn(): array
     {
         return [
-            new Channel('love-react'),
+            new Channel('realtime-data'),
         ];
     }
 }

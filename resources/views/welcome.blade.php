@@ -17,13 +17,53 @@
     <body class="font-sans antialiased bg-gray-100 dark:bg-gray-900">
         <div class="flex flex-col items-center justify-center min-h-screen">
             <h1 class="mb-8 text-4xl font-bold text-gray-800 dark:text-white">Let's Discuss. 💬</h1>
+            <div id="chart"></div>
         </div>
         <script>
             document.addEventListener('DOMContentLoaded', () => {
-                window.Echo.channel("love-react").listen('LoveReact', (data) => {
-                    console.log(data)
-                });
-            })
+                const cpuData = [];
+                const ramData = [];
+                const MAX_POINTS = 60; // Last 60 mins
+
+                const options = {
+                    chart: {
+                        type: 'line',
+                        height: 350,
+                        animations: {
+                            enabled: true,
+                            easing: 'linear',
+                            dynamicAnimation: { speed: 500 }
+                        },
+                        toolbar: { show: false },
+                    },
+                    series: [
+                        { name: 'CPU Usage (%)', data: [] },
+                        { name: 'RAM Usage (%)', data: [] }
+                    ],
+                    xaxis: { type: 'datetime' },
+                    yaxis: { min: 0, max: 100 }
+                };
+
+                const chart = new ApexCharts(document.querySelector("#chart"), options);
+                chart.render();
+
+                // Listen to Laravel Reverb
+                window.Echo.channel('realtime-data')
+                    .listen('DataUpdateEvent', (e) => {
+                        const time = new Date().getTime();
+
+                        cpuData.push({ x: time, y: e.value.cpu });
+                        ramData.push({ x: time, y: e.value.memory });
+
+                        if (cpuData.length > MAX_POINTS) cpuData.shift();
+                        if (ramData.length > MAX_POINTS) ramData.shift();
+
+                        chart.updateSeries([
+                            { data: cpuData },
+                            { data: ramData }
+                        ]);
+                    });
+            });
         </script>
     </body>
 
