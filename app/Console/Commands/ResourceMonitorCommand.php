@@ -65,36 +65,31 @@ class ResourceMonitorCommand extends Command
     // ✅ macOS methods
     private function getCpuUsageMac()
     {
-        $cpuOutput = shell_exec("ps -A -o %cpu | awk '{s+=$1} END {print s}'");
-        return round(floatval($cpuOutput));
+        $cpuUsage = shell_exec("top -l 1 | grep 'CPU usage' | awk '{print $3}' | sed 's/%//'");
+        $cpuUsage = floatval($cpuUsage); // Convert to float
+        return $cpuUsage;
     }
 
     private function getMemoryUsageMac()
     {
-        $vmStat = shell_exec("vm_stat");
-        preg_match('/Pages free:\s+(\d+)\./', $vmStat, $freeMatches);
-        preg_match('/Pages active:\s+(\d+)\./', $vmStat, $activeMatches);
-        preg_match('/Pages inactive:\s+(\d+)\./', $vmStat, $inactiveMatches);
-        preg_match('/Pages speculative:\s+(\d+)\./', $vmStat, $speculativeMatches);
-        preg_match('/Pages wired down:\s+(\d+)\./', $vmStat, $wiredMatches);
-        preg_match('/Pages purgeable:\s+(\d+)\./', $vmStat, $purgeableMatches);
+        // Get RAM usage
+        $memoryInfo = shell_exec("vm_stat");
+        $memoryInfo = explode("\n", $memoryInfo);
 
-        $pageSize = shell_exec("sysctl -n hw.pagesize");
-        $pageSize = intval($pageSize);
+        $pageSize = intval(shell_exec("pagesize"));
+        $freePages = intval(explode(':', $memoryInfo[1])[1]);
+        $activePages = intval(explode(':', $memoryInfo[2])[1]);
+        $inactivePages = intval(explode(':', $memoryInfo[3])[1]);
+        $speculativePages = intval(explode(':', $memoryInfo[4])[1]);
+        $wiredPages = intval(explode(':', $memoryInfo[5])[1]);
 
-        $free = ($freeMatches[1] ?? 0) + ($speculativeMatches[1] ?? 0);
-        $active = $activeMatches[1] ?? 0;
-        $inactive = $inactiveMatches[1] ?? 0;
-        $wired = $wiredMatches[1] ?? 0;
-        $purgeable = $purgeableMatches[1] ?? 0;
+        $usedMemory = ($activePages + $inactivePages + $wiredPages + $speculativePages) * $pageSize;
+        $totalMemory = intval(shell_exec("sysctl hw.memsize | awk '{print $2}'"));
+        $freeMemory = $freePages * $pageSize;
 
-        $usedPages = $active + $inactive + $wired + $purgeable;
-        $totalPages = $free + $usedPages;
+        $ramUsage = (($totalMemory - $freeMemory) / $totalMemory) * 100;
 
-        $usedMem = $usedPages * $pageSize;
-        $totalMem = $totalPages * $pageSize;
-
-        return round(($usedMem / $totalMem) * 100);
+        return round($ramUsage, 2);
     }
 
     // ✅ Linux methods
