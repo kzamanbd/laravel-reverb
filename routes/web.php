@@ -1,6 +1,8 @@
 <?php
 
-use App\Events\DataUpdateEvent;
+use App\Events\ResourceMonitorEvent;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,7 +18,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     try {
-        DataUpdateEvent::dispatch(10);
+        ResourceMonitorEvent::dispatch(10);
         return view('welcome');
     } catch (Exception $e) {
         return response()->json([

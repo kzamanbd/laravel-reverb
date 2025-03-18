@@ -15,9 +15,9 @@
     </head>
 
     <body class="font-sans antialiased bg-gray-100 dark:bg-gray-900">
-        <div class="flex flex-col items-center justify-center min-h-screen">
+        <div class="w-full min-h-screen">
             <h1 class="mb-8 text-4xl font-bold text-gray-800 dark:text-white">Let's Discuss. 💬</h1>
-            <div id="chart"></div>
+            <div id="resourceChart"></div>
         </div>
         <script>
             document.addEventListener('DOMContentLoaded', () => {
@@ -25,44 +25,92 @@
                 const ramData = [];
                 const MAX_POINTS = 60; // Last 60 mins
 
-                const options = {
+                const resourceChartOptions = {
                     chart: {
-                        type: 'line',
+                        type: 'area',
                         height: 350,
                         animations: {
                             enabled: true,
                             easing: 'linear',
-                            dynamicAnimation: { speed: 500 }
+                            dynamicAnimation: {
+                                speed: 500
+                            }
                         },
-                        toolbar: { show: false },
+                        toolbar: {
+                            show: false
+                        },
                     },
-                    series: [
-                        { name: 'CPU Usage (%)', data: [] },
-                        { name: 'RAM Usage (%)', data: [] }
+                    series: [{
+                        type: 'area',
+                        name: 'CPU Usage (%)',
+                        data: []
+                    },
+                    {
+                        type: 'area',
+                        name: 'RAM Usage (%)',
+                        data: []
+                    }
                     ],
-                    xaxis: { type: 'datetime' },
-                    yaxis: { min: 0, max: 100 }
+                    colors: ['#F8F5FF', '#00e396'],
+                    legend: {
+                        show: false
+                    },
+                    dataLabels: {
+                        enabled: true,
+                        style: {
+                            colors: ['#7239ea', '#00e396']
+                        }
+                    },
+                    fill: {
+                        type: 'gradient',
+                        gradient: {
+                            opacityFrom: 0.6,
+                            opacityTo: 0.8,
+                        }
+                    },
+                    stroke: {
+                        curve: 'smooth',
+                        show: true,
+                        width: 3,
+                        colors: ['#7239ea', '#00e396']
+                    },
+                    xaxis: {
+                        type: 'datetime'
+                    },
+                    yaxis: {
+                        min: 0,
+                        max: 100
+                    }
                 };
 
-                const chart = new ApexCharts(document.querySelector("#chart"), options);
-                chart.render();
+                const resourceChart = new ApexCharts(document.querySelector("#resourceChart"), resourceChartOptions);
+                resourceChart.render();
 
                 // Listen to Laravel Reverb
-                window.Echo.channel('realtime-data')
-                    .listen('DataUpdateEvent', (e) => {
-                        const time = new Date().getTime();
+                function cpuAndRamData(e) {
+                    const time = new Date().getTime();
 
-                        cpuData.push({ x: time, y: e.value.cpu });
-                        ramData.push({ x: time, y: e.value.memory });
-
-                        if (cpuData.length > MAX_POINTS) cpuData.shift();
-                        if (ramData.length > MAX_POINTS) ramData.shift();
-
-                        chart.updateSeries([
-                            { data: cpuData },
-                            { data: ramData }
-                        ]);
+                    cpuData.push({
+                        x: time,
+                        y: e.value.cpu
                     });
+                    ramData.push({
+                        x: time,
+                        y: e.value.memory
+                    });
+
+                    if (cpuData.length > MAX_POINTS) cpuData.shift();
+                    if (ramData.length > MAX_POINTS) ramData.shift();
+
+                    resourceChart.updateSeries([{
+                        data: cpuData
+                    },
+                    {
+                        data: ramData
+                    }
+                    ]);
+                }
+                window.Echo.channel('realtime-data').listen('ResourceMonitorEvent', cpuAndRamData);
             });
         </script>
     </body>

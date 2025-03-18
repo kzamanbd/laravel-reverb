@@ -10,7 +10,7 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class DataUpdateEvent implements ShouldBroadCast
+class ResourceMonitorEvent implements ShouldBroadCast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

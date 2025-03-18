@@ -2,12 +2,13 @@
 
 namespace App\Console\Commands;
 
-use App\Events\DataUpdateEvent;
+use App\Events\ResourceMonitorEvent;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class DispatchDataUpdate extends Command
+class ResourceMonitorCommand extends Command
 {
     /**
      * The name and signature of the console command.
@@ -30,6 +31,10 @@ class DispatchDataUpdate extends Command
     {
         $os = PHP_OS_FAMILY;
 
+        Log::info('request', [
+            'username' =>  Cache::get('subscriber_username')
+        ]);
+
         switch ($os) {
             case 'Darwin':
                 $cpu = $this->getCpuUsageMac();
@@ -49,13 +54,13 @@ class DispatchDataUpdate extends Command
                 break;
         }
 
-        broadcast(new DataUpdateEvent([
+        broadcast(new ResourceMonitorEvent([
             'cpu' => $cpu,
             'memory' => $memory,
             'os' => $os
         ]));
 
-        Log::info("[$os] CPU: {$cpu}%, RAM: {$memory}% dispatched.");
+        // Log::info("[$os] CPU: {$cpu}%, RAM: {$memory}% dispatched.");
     }
     // ✅ macOS methods
     private function getCpuUsageMac()
