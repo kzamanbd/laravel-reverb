@@ -4,9 +4,6 @@ namespace App\Console\Commands;
 
 use App\Events\ResourceMonitorEvent;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class ResourceMonitorCommand extends Command
 {
@@ -31,10 +28,6 @@ class ResourceMonitorCommand extends Command
     {
         $os = PHP_OS_FAMILY;
 
-        Log::info('request', [
-            'username' =>  Cache::get('subscriber_username')
-        ]);
-
         switch ($os) {
             case 'Darwin':
                 $cpu = $this->getCpuUsageMac();
@@ -58,59 +51,48 @@ class ResourceMonitorCommand extends Command
             'cpu' => $cpu,
             'memory' => $memory,
             'os' => $os
-        ]));
+        ]))->toOthers();
 
         // Log::info("[$os] CPU: {$cpu}%, RAM: {$memory}% dispatched.");
     }
-    // ✅ macOS methods
     private function getCpuUsageMac()
     {
-        $cpuUsage = shell_exec("top -l 1 | grep 'CPU usage' | awk '{print $3}' | sed 's/%//'");
-        $cpuUsage = floatval($cpuUsage); // Convert to float
-        return $cpuUsage;
+        $cpuOutput = shell_exec("top -l 1 | grep 'CPU usage' | awk '{print $3}' | sed 's/%//'");
+        return round(floatval($cpuOutput));
     }
 
     private function getMemoryUsageMac()
     {
-        // Get RAM usage
-        $memoryInfo = shell_exec("vm_stat");
-        $memoryInfo = explode("\n", $memoryInfo);
+        $cmd = "top -l 1 | grep 'PhysMem' | awk '{print $2}' | tr -d 'M'";
+        $usedMemory = intval(trim(shell_exec($cmd)));
 
-        $pageSize = intval(shell_exec("pagesize"));
-        $freePages = intval(explode(':', $memoryInfo[1])[1]);
-        $activePages = intval(explode(':', $memoryInfo[2])[1]);
-        $inactivePages = intval(explode(':', $memoryInfo[3])[1]);
-        $speculativePages = intval(explode(':', $memoryInfo[4])[1]);
-        $wiredPages = intval(explode(':', $memoryInfo[5])[1]);
+        $cmd = "sysctl hw.memsize | awk '{print $2}'";
+        $totalMemory = intval(trim(shell_exec($cmd)));
+        $totalMemoryMB = $totalMemory / (1024 * 1024);
 
-        $usedMemory = ($activePages + $inactivePages + $wiredPages + $speculativePages) * $pageSize;
-        $totalMemory = intval(shell_exec("sysctl hw.memsize | awk '{print $2}'"));
-        $freeMemory = $freePages * $pageSize;
-
-        $ramUsage = (($totalMemory - $freeMemory) / $totalMemory) * 100;
-
-        return round($ramUsage, 2);
+        return round(($usedMemory / $totalMemoryMB) * 100, 2);
     }
 
     // ✅ Linux methods
     private function getCpuUsageLinux()
     {
-        $load = sys_getloadavg();
-        $cores = (int) shell_exec('nproc');
-        return round($load[0] * 100 / $cores);
+        $cpuUsage = shell_exec("top -bn1 | grep \"Cpu(s)\" | awk '{print $2 + $4}'");
+
+        return round($cpuUsage, 2);
     }
 
     private function getMemoryUsageLinux()
     {
-        $memInfo = file_get_contents("/proc/meminfo");
-        preg_match("/MemTotal:\s+(\d+)/", $memInfo, $total);
-        preg_match("/MemAvailable:\s+(\d+)/", $memInfo, $free);
+        $free = shell_exec('free');
+        $free = (string)trim($free);
+        $free_arr = explode("\n", $free);
+        $mem = explode(" ", $free_arr[1]);
+        $mem = array_filter($mem);
+        $mem = array_merge($mem);
 
-        $totalMem = $total[1] ?? 1;
-        $freeMem = $free[1] ?? 0;
-        $usedMem = $totalMem - $freeMem;
+        $memory_usage = round($mem[2] / $mem[1] * 100, 2);
 
-        return round(($usedMem / $totalMem) * 100);
+        return $memory_usage;
     }
 
     // ✅ Windows methods
